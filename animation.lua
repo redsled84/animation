@@ -2,6 +2,8 @@ local class 	= require 'middleclass'
 local Quads 	= require 'quads'
 local Animation = class('Animation')
 
+-- f = starting 'tile' in the image, e = ending 'tile' in the image
+-- For an example please reference to player.lua and .png file(s) in the directory
 function Animation:initialize(image, f, e, delay, x, y)
 	self.image = image
 	self.delay = delay
