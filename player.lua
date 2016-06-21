@@ -1,4 +1,7 @@
 local Animation = require 'animation'
+local Collision = require 'collision'
+local Hook 		= require 'hook'
+local Vector  	= require 'vector'
 local Player 	= {}
 
 function Player:load(x, y, w, h, image)
@@ -38,7 +41,7 @@ function Player:load(x, y, w, h, image)
 	}
 end
 
-function Player:move(dt)
+function Player:moveWithKeys(dt)
 	local lk = love.keyboard
 	
 	if lk.isDown('s') then
@@ -75,8 +78,52 @@ function Player:move(dt)
 	self.y = self.y + self.yvel * dt
 end
 
+function Player:moveByVelocity(dt)
+	if self.tmp then
+		self.x = self.x + self.tmp.x * dt
+		self.y = self.y + self.tmp.y * dt
+	end
+end
+
+function Player:checkHook(dt)
+	if Hook:getActive() then
+		local distance = math.sqrt(math.pow(self.x - Hook.sx, 2) + math.pow(self.y - Hook.sy, 2))
+		if distance >= Hook.distance then
+			Hook:unactivate()
+		end
+	end
+end
+
+function Player:movement(dt)
+	local xvel, yvel = Hook:getVelocities()
+	if Hook:getActive() and xvel == 0 and yvel == 0 then
+		self:moveByVelocity(dt)
+	elseif not Hook:getActive() then
+		self:moveWithKeys(dt)
+	end
+	self:checkHook(dt)
+end
+
+function Player:disableHookOnCollide()
+	if Hook:getActive() then
+		self.tmp.x, self.tmp.y = 0, 0
+		Hook:unactivate()
+	end
+end
+
+function Player:collide(o)
+	local col, rect = Collision:aabbCollision(o, self)
+	if col then
+		local nx, ny = Collision:getCollidingSide(rect, self)
+		self.x, self.y, self.xvel, self.yvel = Collision:solveCollision(nx, ny, rect, self)
+
+		self:disableHookOnCollide()
+	end
+end
+
 function Player:update(dt)
-	self:move(dt)
+	self:movement(dt)
+	
 	for _, v in ipairs(self.animations) do
 		if v.name == self.currentAnimation then
 			v.animation:update(dt)
@@ -96,29 +143,16 @@ function Player:draw()
 	love.graphics.rectangle('line', self.x, self.y, self.w, self.h)
 end
 
-function Player:solveCollision(nx, ny, rect)
-	if nx < 0 then
-		self.x = rect.x - self.w
-		self.xvel = 0
-	elseif nx > 0 then
-		self.x = rect.x + rect.w
-		self.xvel = 0
-	end
-	if ny < 0 then
-		self.y = rect.y - self.h
-		self.yvel = 0
-	elseif ny > 0 then
-		self.y = rect.y + rect.h
-		self.yvel = 0
-	end
-end
-
 function Player:getWidth()
 	return self.w
 end
 
 function Player:getHeight()
 	return self.h
+end
+
+function Player:getCenter()
+	return self.x + self.w / 2, self.y + self.h / 2
 end
 
 return Player

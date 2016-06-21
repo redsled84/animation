@@ -1,33 +1,59 @@
-local Hook = {}
+local Collision 	= require 'collision'
+local Globals 		= require 'globals'
+local tileW, tileH 	= Globals.tileW, Globals.tileH
+local Hook 			= {}
 
-function Hook:load(w, h)
-	self.active = false
-	self.freeze = false
-	self.spd = 100
-	self.w, self.h = w, h
+Hook.w, Hook.h 		= tileW / 2, tileH / 2
+Hook.spd 			= 600
+
+function Hook:set(v1, v2)
+	self.x, self.y 		 = v1.x, v1.y
+	self.sx, self.sy 	 = v1.x, v1.y
+	self.ex, self.ey 	 = v2.x, v2.y
+	self.distance   	 = math.sqrt(math.pow(v2.x-v1.x, 2)+math.pow(v2.y-v1.y, 2))
+	self.directionX 	 = (v2.x - v1.x) / self.distance
+	self.directionY 	 = (v2.y - v1.y) / self.distance
+	self.xvel, self.yvel = self.directionX * self.spd, self.directionY * self.spd
+	self.activated 		 = true
 end
 
-function Hook:destantiate()
-	self.x, self.y = nil, nil
-	self.gx, self.gy = nil, nil
-	self.dx, self.dy = nil, nil
-	self.dir = nil
+function Hook:unset()
+	if self.activated then
+		self.xvel, self.yvel = 0, 0
+	end
 end
 
-function Hook:setStart(sx, sy)
-	self.x = sx
-	self.y = sy
+function Hook:unactivate()
+	self.activated = false
 end
 
-function Hook:setGoal(gx, gy)
-	self.gx = gx
-	self.gy = gy
+function Hook:collide(o)
+	if self.activated then
+		local col, rect = Collision:aabbCollision(o, self)
+		if col then
+			local nx, ny 	= Collision:getCollidingSide(rect, self)
+			self.x, self.y  = Collision:solveCollision(nx, ny, rect, self)
+			Hook:unset()
+		end
+	end
 end
 
-function Hook:activate()
-	self.dx, self.dy = self.gx - self.x, self.gy - self.y
-	self.dir = math.atan2(self.dy, self.dx)
-	self.active = true
+function Hook:update(dt)
+	if self.activated then
+		self.x = self.x + self.xvel * dt
+		self.y = self.y + self.yvel * dt
+
+		if math.sqrt(math.pow(self.x - self.sx, 2)+math.pow(self.y - self.sy, 2)) >= self.distance then
+			self:unset()
+		end
+	end
+end
+
+function Hook:draw()
+	if self.activated then
+		love.graphics.setColor(255, 0, 0)
+		love.graphics.rectangle('line', self.x, self.y, self.w, self.h)
+	end
 end
 
 function Hook:getWidth()
@@ -38,38 +64,12 @@ function Hook:getHeight()
 	return self.h
 end
 
-function Hook:solveCollision(nx, ny, rect)
-	if nx < 0 then
-		self.x = rect.x - self.w
-	elseif nx > 0 then
-		self.x = rect.x + rect.w
-	end
-	if ny < 0 then
-		self.y = rect.y - self.h
-	elseif ny > 0 then
-		self.y = rect.y + rect.h
-	end
+function Hook:getVelocities()
+	return self.xvel, self.yvel
 end
 
-function Hook:update(dt)
-	if self.active and not self.freeze then
-		self.x = self.x + self.spd * math.cos(self.dir) * dt
-		self.y = self.y + self.spd * math.sin(self.dir) * dt
-
-		if self.x >= self.gx and self.y >= self.gy then
-			self.x = self.gx
-			self.y = self.gy
-			self.active = false
-			self:destantiate()
-		end
-	end
-end
-
-function Hook:draw()
-	if self.active then
-		love.graphics.setColor(255, 0, 0)
-		love.graphics.rectangle('line', self.x, self.y, self.w, self.h)
-	end
+function Hook:getActive()
+	return self.activated
 end
 
 return Hook

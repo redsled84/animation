@@ -3,10 +3,11 @@ local tileW, tileH = globals.tileW, globals.tileH
 
 -- new
 
+local Collision    = require 'collision'
 local Hook 		   = require 'hook'
 local Player       = require 'player'
 local Rectangle    = require 'rectangle'
-local Collision    = require 'collision'
+local Vector       = require 'vector'
 
 math.randomseed(os.time())
 math.random();math.random();math.random();
@@ -18,44 +19,25 @@ function love.load()
 		Rectangle:new(400, 200, 32, 32),
 		Rectangle:new(300, 200, 100, 64)
 	}
+
 	spritesheet = love.graphics.newImage('tileset.png')
 	Player:load(0, 0, tileW, tileH, spritesheet)
-
-	-- new
-
-	Hook:load(tileW / 2, tileH / 2)
 end
 
 function love.update(dt)
 	Player:update(dt)
-
-	-- new
-
 	Hook:update(dt)
-	for _, rect in ipairs(rectangles) do
-		local col, b = Collision:aabbCollision(rect, Player)
-		if col then
-			local nx, ny = Collision:getCollidingSide(Player, rect)
-			Player:solveCollision(nx, ny, rect)
-		end
 
-		-- new
-
-		if Hook.active then
-			local col, b = Collision:aabbCollision(rect, Hook)
-			if col then
-				Hook.freeze = true
-			end
-		end
+	for _, v in ipairs(rectangles) do
+		Player:collide(v)
+		Hook:collide(v)
 	end
 end
 
 function love.draw()
 	Player:draw()
-
-	-- new
-
 	Hook:draw()
+
 	for _, rect in ipairs(rectangles) do
 		rect:draw()
 	end
@@ -70,12 +52,17 @@ function love.keypressed(key)
 	end
 end
 
--- new
-
 function love.mousepressed(x, y, button)
+end
+
+function love.mousereleased(x, y, button)
 	if button == 1 then
-		Hook:setStart(Player.x, Player.y)
-		Hook:setGoal(x, y)
-		Hook:activate()
+		local px, py = Player:getCenter()
+		px = px - Hook:getWidth() / 2
+		py = py - Hook:getHeight() / 2
+		local v1 = Vector:new(px, py)
+		local v2 = Vector:new(x, y)
+		Hook:set(v1, v2)
+		Player.tmp = Vector:new(Hook.xvel, Hook.yvel)
 	end
 end
