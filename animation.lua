@@ -24,8 +24,10 @@ function Animation:update(dt)
 	end
 end
 
-function Animation:draw(x, y)
-	love.graphics.draw(self.image, self.quads[self.dnum], x, y)
+function Animation:draw(x, y, sx, sy)
+	local sx = sx or 1
+	local sy = sy or 1
+	love.graphics.draw(self.image, self.quads[self.dnum], x, y, 0, sx, sy)
 end
 
 return Animation

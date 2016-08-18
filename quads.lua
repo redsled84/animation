@@ -26,6 +26,12 @@ function Quads:loadQuadInfo(image)
 	return quadInfo
 end
 
+function Quads:loadQuad(image, n)
+	local quadInfo = self:loadQuadInfo(image)
+	local info = quadInfo[n]
+	return love.graphics.newQuad(info.x, info.y, info.w, info.h, image:getDimensions())
+end
+
 function Quads:loadQuads(image, f, e)
 	local quads = {}
 	local quadInfo = self:loadQuadInfo(image)
